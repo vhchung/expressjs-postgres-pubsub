@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+'use strict';
+var debug = require('debug')('dat_ve_xem_phim');
+var app = require('../app');
+
+app.set('port', process.env.PORT || 80);
+
+var server = app.listen(app.get('port'), function () {
+    debug('Express server listening on port ' + server.address().port);
+});
+
+global.__io = require('socket.io').listen(server);
+
+let conString = "postgres://vhchung@localhost/cinema";
+let pg = require('pg');
+
+__io.on('connection', function (socket) {
+    socket.on('book', function (data) {
+        let room_id = data.room_id;
+        let row = data.row;
+        let seat_number = data.seat_number;
+        let status = data.status;
+        let insert = data.insert;
+        let query = 'insert into book_ticket(room_id, row, seat_number, status) values(\'' + room_id + '\',\'' + row + '\',\'' + seat_number + '\', \'' + status + '\')';
+        if(data.ticket_id) query = 'DELETE FROM book_ticket WHERE id=\'' + data.ticket_id + '\'';
+        console.log(query);
+        pg.connect(conString, function (err, client) {
+            if (err) {
+                console.log(err);
+            }
+            client.on('notification', function (msg) {
+                if (msg.name === 'notification' && msg.channel === 'table_update') {
+                    let pl = JSON.parse(msg.payload);
+                    pl.socket_id = socket.client.id;
+                    __io.emit('book_ticket', pl);
+                }
+            });
+            client.query("LISTEN table_update");
+
+            let q = new Promise(function (fulfill, reject) {
+                client.query(query, function (err, result) {
+                    if (err) {
+                        reject(err)
+                    } else fulfill(result);
+                });
+            }).then(function () {
+                    client.end();
+                }).catch(function (err) {
+                    console.error('error running query', err);
+                    client.end();
+                    data.socket_id = id;
+                    __io.emit('book_ticket', data);
+                });
+        });
+    })
+});

@@ -1,0 +1,24 @@
+{% extends 'layout.html' %}
+{% block content %}
+    <h1>Welcome to {{ title }}</h1>
+    <div class="col-md-12">
+        <div class="form-group">
+            <label for="pick">Pick a room</label>
+            <select name="pick-room" id="pick" class="form-control">
+                {% for r in rooms %}
+                    <option value="{{ r.id }}">{{ r.id }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="btn btn-primary">Go to room</button>
+    </div>
+{% endblock %}
+{% block jsExtends %}
+    <script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
+    <script>
+        var socket = io.connect('http://localhost');
+        $('.btn').click(function(){
+            window.location.href = '/room/' + $('select').val();
+        });
+    </script>
+{% endblock %}

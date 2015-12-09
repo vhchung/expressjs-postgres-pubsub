@@ -1,0 +1,90 @@
+{% extends 'layout.html' %}
+{% block content %}
+    <style>
+        .helper label {
+            margin: 0 10px;
+        }
+    </style>
+    <div class="room text-center">
+        <div class="col-md-12 helper" style="margin-bottom: 30px">
+            <button class="btn btn-sm c-row btn-default disabled">
+                <i class="fa fa-user"></i>
+            </button>
+            <label for="">Availble</label>
+            <button class="btn btn-sm c-row btn-success disabled">
+                <i class="fa fa-user"></i>
+            </button>
+            <label for="">Booked</label>
+            <button class="btn btn-sm c-row btn-primary">
+                <i class="fa fa-user"></i>
+            </button>
+            <label for="">Can be cancel</label>
+
+        </div>
+        <div class="screen" style="margin-bottom: 30px">
+            <img class="img" src="/images/screen.png" alt="screen"/>
+        </div>
+        <div class="row">
+            {% for i in range(1, room.number_of_rows + 1) %}
+
+                <div class="col-md-12" style="margin-bottom: 15px">
+                    <span class="c-row">Rows {{ i }}</span>
+                    {% for j in range(1, 9) %}
+                        {% set position = i + '-' + j %}
+                        {% set class = "btn-default" if (position not in booked) else "btn-success disabled" %}
+                        <button class="btn btn-sm c-row seat {{ class }}" id="{{ position }}">
+                            <i class="fa fa-user"></i>
+                        </button>
+                    {% endfor %}
+                </div>
+
+            {% endfor %}
+        </div>
+    </div>
+
+{% endblock %}
+{% block jsExtends %}
+    <script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
+    <script>
+        var socket = io.connect('http://localhost');
+        $('.seat').click(function () {
+            var insert = $(this).hasClass('btn-default');
+            var status = (insert) ? 1 : 2;
+            var id = $(this).attr('id').split('-');
+            var ticket_id = $(this).attr('data-id');
+
+            var data = {
+                room_id: {{ room.id }},
+                row: id[0],
+                seat_number: id[1],
+                status: status,
+                insert: insert
+            };
+            if(ticket_id) data.ticket_id = ticket_id;
+            console.log(data);
+            socket.emit('book', data);
+            return false;
+        });
+        socket.on('book_ticket', function (msg) {
+            console.log(socket.id, '---***---', msg);
+            if (socket.id !== msg.socket_id) {
+                if (msg.room_id = {{ room.id }}) {
+                    if(msg.type !== 'DELETE')
+                        $('#' + msg.row + '-' + msg.seat_number).removeClass('btn-default').addClass('btn-success disabled');
+                    else
+                        $('#' + msg.row + '-' + msg.seat_number).removeClass('btn-success disabled').addClass('btn-default')
+                                .attr('data-id', '');
+                }
+            } else {
+                if (msg.room_id = {{ room.id }}) {
+                    if(msg.type !== 'DELETE')
+                        $('#' + msg.row + '-' + msg.seat_number).removeClass('btn-default').addClass('btn-primary')
+                            .attr('data-id', msg.id);
+                    else
+                        $('#' + msg.row + '-' + msg.seat_number).removeClass('btn-primary').addClass('btn-default')
+                                .attr('data-id', '');
+                }
+            }
+        });
+    </script>
+{% endblock %}
